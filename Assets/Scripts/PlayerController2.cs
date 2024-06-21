@@ -19,7 +19,7 @@ public class PlayerController2 : MonoBehaviour
     public float cornerStateMaxDst = 0.6f;
     public float cornerLimitDst = 1f;
     private Vector3 lastDir = Vector3.zero;
-    public Vector3 lastSurface = Vector3.zero;
+    public Vector3 lastSurfaceNormal = Vector3.zero;
     private Vector3 lastCornerPoint = Vector3.zero;
     
     private Vector3 newSurfacePoint = Vector3.zero;
@@ -97,7 +97,7 @@ public class PlayerController2 : MonoBehaviour
 
         if(surfaceNormal.magnitude <= 1){
             
-            lastSurface = surfaceNormal;
+            lastSurfaceNormal = surfaceNormal;
             // Debug.Log(surfaceNormal + " || " + lastSurface);
             cornerState = false;
             GetDirection(surfaceNormal);
@@ -106,24 +106,24 @@ public class PlayerController2 : MonoBehaviour
             float cornerDistance = Vector3.Distance(transform.position, lastCornerPoint);
             if(cornerState && cornerDistance <= cornerStateMinDst){
                 // Debug.Log("NON Gravity CORNER STATE");
-                GetDirection(lastSurface);
+                GetDirection(lastSurfaceNormal);
                 return;
             }
 
             if(cornerState && cornerDistance >= cornerStateMaxDst){
                 // Debug.Log("Gravity CORNER STATE");
-                ApplyGravity(-lastSurface);
+                ApplyGravity(-lastSurfaceNormal);
                 return;
-                // lastCornerPoint = transform.position;
             }
 
             
-            Vector3 prevNormal = GetBehindNormal();
+            Vector3 prevNormal = GetBehindNormal(); // Если нет никаких точек, продолжаем двигаться получая, нормаль рейкастом с края сферы.
             if(prevNormal.magnitude <= 1){
                 GetDirection(prevNormal);
-                lastSurface = prevNormal;
+                lastSurfaceNormal = prevNormal;
                 return;
             }
+
             moveDirectionForward = transform.forward;
             moveDirectionRight = transform.right;
             ApplyGravity(-Vector3.up);
@@ -134,26 +134,30 @@ public class PlayerController2 : MonoBehaviour
         // Debug.Log("GET BEHIND NORMAL");
         RaycastHit raycastHit;
 
-        if(Physics.Raycast(transform.position - (lastDir * sphereRadius), -lastSurface, out raycastHit, sphereRadius + 0.1f, groundMask, QueryTriggerInteraction.Ignore)){
-            lastCornerPoint = raycastHit.point;
+        if(Physics.Raycast(transform.position - (lastDir * sphereRadius), -lastSurfaceNormal, out raycastHit, sphereRadius + 0.1f, groundMask, QueryTriggerInteraction.Ignore)){
+            lastCornerPoint = raycastHit.point; // Луч с противоположного траектории движения сферы конца
             return raycastHit.normal;
-        }
-        // Corner Troundle Detect
+        }else{
 
-        newSurfacePoint = lastCornerPoint + -lastSurface * newNormalPointDst;
-        cornerState = true;
-        Vector3 newNormal = GetSurfaceNormal(newSurfacePoint, newNormalRayDistance);
+            // Сфера находится на углу, находим новую поверхность
+            // Corner Trouble Detect
+            cornerState = true;
 
-        if(DebugCornerDetection){
-            Debug.Log(Vector3.Distance(transform.position, lastCornerPoint));
-            Debug.Break();
+            newSurfacePoint = lastCornerPoint + -lastSurfaceNormal * newNormalPointDst; // Преположительная точка на новой поверхности.
+            
+            Vector3 newNormal = GetSurfaceNormal(newSurfacePoint, newNormalRayDistance);
+
+            if(DebugCornerDetection){
+                Debug.Log(Vector3.Distance(transform.position, lastCornerPoint));
+                Debug.Break();
+            }
+            
+            if(Vector3.Dot(transform.forward, newNormal) < 0){
+                return lastSurfaceNormal;
+            }
+            
+            return newNormal;
         }
-        
-        if(Vector3.Dot(transform.forward, newNormal) < 0){
-            return lastSurface;
-        }
-        
-        return newNormal;
     }
 
     private Vector3 GetSurfaceNormal(Vector3 point, float rayDst){
@@ -171,10 +175,10 @@ public class PlayerController2 : MonoBehaviour
     }
 
     void OnDrawGizmos(){
-        // Gizmos.color = Color.blue;
-        // Gizmos.DrawSphere(lastCornerPoint, 0.1f);
+        Gizmos.color = Color.blue;
+        Gizmos.DrawSphere(lastCornerPoint, 0.1f);
 
-        // Gizmos.color = Color.red;
-        // Gizmos.DrawSphere(newSurfacePoint, 0.1f);
+        Gizmos.color = Color.red;
+        Gizmos.DrawSphere(newSurfacePoint, 0.1f);
     }
 }

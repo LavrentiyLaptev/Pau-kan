@@ -3886,7 +3886,7 @@ MonoBehaviour:
   cornerStateMaxDst: 0.8
   cornerLimitDst: 1
   lastSurface: {x: 0, y: 0, z: 0}
-  cornerState: 0
+  cornerState: 1
   DebugCornerDetection: 0
 --- !u!43 &1030455589
 Mesh:
