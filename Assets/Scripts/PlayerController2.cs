@@ -1,5 +1,8 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Collections;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Jobs;
 
@@ -11,7 +14,6 @@ public class PlayerController2 : MonoBehaviour
     public float speed;
     public float gravity;
     public float sphereRadius;
-    public float angleStep = 10;
     public float newNormalRayDistance;
     private int groundMask;
     public float newNormalPointDst = 0.1f;
@@ -20,11 +22,23 @@ public class PlayerController2 : MonoBehaviour
     public float cornerLimitDst = 1f;
     private Vector3 lastDir = Vector3.zero;
     public Vector3 lastSurfaceNormal = Vector3.zero;
-    private Vector3 lastCornerPoint = Vector3.zero;
+    [SerializeField] private Vector3 lastCornerPoint = Vector3.zero;
     
     private Vector3 newSurfacePoint = Vector3.zero;
     public bool cornerState = false;
     public bool DebugCornerDetection = false;
+
+    public float curveRayDst = 0.6f;
+    public float furtherPointStep = 0.1f;
+
+    [Header("Circular Movement")]
+    private Vector3 lastSurfacePoint = Vector3.zero;
+    public Vector3 circularPoint;
+    public float circularRadius;
+    [SerializeField] private bool yPositive = true;
+    private int loopIndex = 0;
+    public bool circularState = false;
+
 
     void Start()
     {
@@ -37,8 +51,9 @@ public class PlayerController2 : MonoBehaviour
     }
 
     void FixedUpdate(){
-        GetTouchPounts();
-        Movement();
+        // GetTouchPounts();
+        // Movement();
+        CircularMovement();
     }
 
     private void Inputs(){
@@ -88,21 +103,31 @@ public class PlayerController2 : MonoBehaviour
             if(angle > minAngle){
                 minAngle = angle;
                 surfaceNormal = normals[i];
+                lastSurfacePoint = touchPoints[i];
             }
         }
 
-        if(cornerState && Vector3.Distance(transform.position, lastCornerPoint) >= cornerLimitDst){
-            cornerState = false;
-        }
+        // if(cornerState && Vector3.Distance(transform.position, lastCornerPoint) >= cornerLimitDst){ // for Corner state
+        //     cornerState = false;
+        // }
 
         if(surfaceNormal.magnitude <= 1){
             
             lastSurfaceNormal = surfaceNormal;
+            
             // Debug.Log(surfaceNormal + " || " + lastSurface);
             cornerState = false;
             GetDirection(surfaceNormal);
-
+            Movement();
         }else{ 
+
+            // CornerStateLogic();
+
+            CircularStateLogic();
+        }
+    }
+
+    private void CornerStateLogic(){
             float cornerDistance = Vector3.Distance(transform.position, lastCornerPoint);
             if(cornerState && cornerDistance <= cornerStateMinDst){
                 // Debug.Log("NON Gravity CORNER STATE");
@@ -127,14 +152,22 @@ public class PlayerController2 : MonoBehaviour
             moveDirectionForward = transform.forward;
             moveDirectionRight = transform.right;
             ApplyGravity(-Vector3.up);
-        }
+    }
+
+    private void CircularStateLogic(){
+
+        circularPoint = lastSurfacePoint;
+        float r = Vector3.Distance(transform.position, circularPoint);
+        circularRadius = r;
+
+        CircularMovement();
     }
 
     private Vector3 GetBehindNormal(){
         // Debug.Log("GET BEHIND NORMAL");
         RaycastHit raycastHit;
 
-        if(Physics.Raycast(transform.position - (lastDir * sphereRadius), -lastSurfaceNormal, out raycastHit, sphereRadius + 0.1f, groundMask, QueryTriggerInteraction.Ignore)){
+        if(Physics.Raycast(transform.position - (lastDir * sphereRadius), -lastSurfaceNormal, out raycastHit, sphereRadius + 0.5f, groundMask, QueryTriggerInteraction.Ignore)){
             lastCornerPoint = raycastHit.point; // Луч с противоположного траектории движения сферы конца
             return raycastHit.normal;
         }else{
@@ -174,11 +207,75 @@ public class PlayerController2 : MonoBehaviour
         moveDirectionRight = Vector3.ProjectOnPlane(transform.right, surfaceNormal);
     }
 
-    void OnDrawGizmos(){
-        Gizmos.color = Color.blue;
-        Gizmos.DrawSphere(lastCornerPoint, 0.1f);
+    private bool IsFatherSurfaceCurve(){
 
-        Gizmos.color = Color.red;
-        Gizmos.DrawSphere(newSurfacePoint, 0.1f);
+        Vector3 furtherPoint = Vector3.zero;
+        RaycastHit hit;
+        if(Physics.Raycast(transform.position, -lastSurfaceNormal, out hit, sphereRadius + 0.01f, groundMask, QueryTriggerInteraction.Ignore)){
+            furtherPoint = hit.point + lastDir * furtherPointStep;
+        }else{
+            return false;
+        }
+        Vector3 furtherNormal = GetSurfaceNormal(furtherPoint, curveRayDst);
+
+        float angle = Vector3.Angle(lastSurfaceNormal, furtherNormal);
+        Debug.Log(angle);
+
+        return angle > 0.01f;
+    }
+
+    private void CircularMovement(){
+        Debug.Log("Circular Movement");
+        if(inputDirs.magnitude == 0) return;
+
+        Vector3 sphereNormal = (transform.position - circularPoint).normalized;
+
+        Vector3 moveDir;
+
+        Vector3 sphereDirForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
+        Vector3 sphereDirRight = Vector3.ProjectOnPlane(transform.right, Vector3.up);
+
+        moveDir = (sphereDirForward * inputDirs.y + sphereDirRight * inputDirs.x).normalized;
+
+        float xSpeedCoef = Mathf.Abs(transform.position.y - circularPoint.y) / circularRadius;
+
+        if(xSpeedCoef <= 0) xSpeedCoef = 0.1f;
+        if(xSpeedCoef > 1) xSpeedCoef = 1;
+
+        Debug.Log(xSpeedCoef);
+
+        // XYZ movement
+
+        //  * (yPositive? 1 : -1)
+
+        float z = transform.position.z + moveDir.z * (yPositive? 1 : -1) * speed * xSpeedCoef * Time.fixedDeltaTime;
+
+        float x = transform.position.x + moveDir.x * (yPositive? 1 : -1) * speed * xSpeedCoef * Time.fixedDeltaTime;
+
+        float y = (yPositive? 1 : -1) * Mathf.Sqrt((circularRadius * circularRadius) - (x * x) - (z * z));
+
+        Debug.Log($"Further XYZ : {x + circularPoint.x}, {y}, {circularPoint.z}");
+        if(float.IsNaN(y) || (Mathf.Abs(y) > circularRadius)){
+            yPositive = !yPositive;
+            Debug.Log("switch y sphere state");
+            return;
+        }
+
+        loopIndex = 0;
+
+        Vector3 pointOnSphere = new Vector3(x, y, z) + circularPoint;
+
+        transform.position = pointOnSphere;
+    }
+
+    void OnDrawGizmos(){
+        // Gizmos.color = Color.blue;
+        // Gizmos.DrawSphere(lastCornerPoint, 0.1f);
+
+        // Gizmos.color = Color.red;
+        // Gizmos.DrawSphere(newSurfacePoint, 0.1f);
+        
+        Gizmos.color = Color.blue;
+        Gizmos.DrawSphere(lastSurfacePoint, 0.1f);
     }
 }
