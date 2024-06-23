@@ -36,7 +36,7 @@ public class PlayerController2 : MonoBehaviour
     public Vector3 circularPoint;
     public float circularRadius;
     [SerializeField] private bool yPositive = true;
-    private int loopIndex = 0;
+    // private int loopIndex = 0;
     public bool circularState = false;
 
 
@@ -51,9 +51,9 @@ public class PlayerController2 : MonoBehaviour
     }
 
     void FixedUpdate(){
-        // GetTouchPounts();
+        GetTouchPounts();
         // Movement();
-        CircularMovement();
+        // CircularMovement();
     }
 
     private void Inputs(){
@@ -112,7 +112,7 @@ public class PlayerController2 : MonoBehaviour
         // }
 
         if(surfaceNormal.magnitude <= 1){
-            
+            circularState = false;
             lastSurfaceNormal = surfaceNormal;
             
             // Debug.Log(surfaceNormal + " || " + lastSurface);
@@ -156,10 +156,16 @@ public class PlayerController2 : MonoBehaviour
 
     private void CircularStateLogic(){
 
+        
         circularPoint = lastSurfacePoint;
         float r = Vector3.Distance(transform.position, circularPoint);
         circularRadius = r;
 
+        if(circularState == false){
+            yPositive = transform.position.y > circularPoint.y;
+        }
+        
+        circularState = true;
         CircularMovement();
     }
 
@@ -225,15 +231,31 @@ public class PlayerController2 : MonoBehaviour
     }
 
     private void CircularMovement(){
-        Debug.Log("Circular Movement");
         if(inputDirs.magnitude == 0) return;
 
         Vector3 sphereNormal = (transform.position - circularPoint).normalized;
 
         Vector3 moveDir;
 
-        Vector3 sphereDirForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
-        Vector3 sphereDirRight = Vector3.ProjectOnPlane(transform.right, Vector3.up);
+        Vector3 upAxis = Vector3.right;
+
+        Vector3 projectDir = Vector3.up;
+
+        // float xPos = transform.position.x - circularPoint.x;
+        // float yPos = transform.position.y - circularPoint.y;
+        // float zPos = transform.position.z - circularPoint.z;
+
+        // if(yPos > xPos && yPos > zPos){
+        //     projectDir = Vector3.up;
+        // }else if(xPos > yPos && xPos > zPos){
+        //     projectDir = Vector3.right;
+        // }else if(zPos > yPos && zPos > xPos){
+        //     projectDir = Vector3.forward;
+        // }
+        
+
+        Vector3 sphereDirForward = Vector3.ProjectOnPlane(transform.forward, projectDir);
+        Vector3 sphereDirRight = Vector3.ProjectOnPlane(transform.right, projectDir);
 
         moveDir = (sphereDirForward * inputDirs.y + sphereDirRight * inputDirs.x).normalized;
 
@@ -242,28 +264,27 @@ public class PlayerController2 : MonoBehaviour
         if(xSpeedCoef <= 0) xSpeedCoef = 0.1f;
         if(xSpeedCoef > 1) xSpeedCoef = 1;
 
-        Debug.Log(xSpeedCoef);
-
         // XYZ movement
 
         //  * (yPositive? 1 : -1)
 
-        float z = transform.position.z + moveDir.z * (yPositive? 1 : -1) * speed * xSpeedCoef * Time.fixedDeltaTime;
+        float z = transform.position.z + (moveDir.z * (yPositive? 1 : -1) * speed * xSpeedCoef * Time.fixedDeltaTime);
 
-        float x = transform.position.x + moveDir.x * (yPositive? 1 : -1) * speed * xSpeedCoef * Time.fixedDeltaTime;
+        float x = transform.position.x + (moveDir.x * (yPositive? 1 : -1) * speed * xSpeedCoef * Time.fixedDeltaTime);
 
-        float y = (yPositive? 1 : -1) * Mathf.Sqrt((circularRadius * circularRadius) - (x * x) - (z * z));
+        float y = circularPoint.y + ((yPositive? 1 : -1) * Mathf.Sqrt((circularRadius * circularRadius) - Mathf.Pow(x - circularPoint.x, 2) - Mathf.Pow(z - circularPoint.z, 2)));
 
-        Debug.Log($"Further XYZ : {x + circularPoint.x}, {y}, {circularPoint.z}");
-        if(float.IsNaN(y) || (Mathf.Abs(y) > circularRadius)){
+        // Debug.Log($"Further XYZ : {x}, {y}, {z}");
+
+        if(float.IsNaN(y) || (Mathf.Abs(y) > circularRadius + circularPoint.y)){
             yPositive = !yPositive;
-            Debug.Log("switch y sphere state");
+            // Debug.Log("switch y sphere state");
             return;
         }
 
-        loopIndex = 0;
+        // loopIndex = 0;
 
-        Vector3 pointOnSphere = new Vector3(x, y, z) + circularPoint;
+        Vector3 pointOnSphere = new Vector3(x, y, z);
 
         transform.position = pointOnSphere;
     }
