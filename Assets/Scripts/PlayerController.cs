@@ -172,7 +172,7 @@ public class PlayerController : MonoBehaviour
             if(dotProduct >= normalDotTreshHold){
                 Debug.Log(dotProduct);
                 // moveDirForward = RaycastDir();
-                customGravity.gravityDirection = -Vector3.up;
+                // customGravity.gravityDirection = -Vector3.up;
                 return;
             } 
             surfaceNormal = hit.normal;
@@ -180,9 +180,9 @@ public class PlayerController : MonoBehaviour
             moveDirRight = Vector3.ProjectOnPlane(transform.right, hit.normal);
             moveDirForward.Normalize();
             moveDirRight.Normalize();
-            customGravity.gravityDirection = -hit.normal.normalized;
+            // customGravity.gravityDirection = -hit.normal.normalized;
         }else{
-            customGravity.gravityDirection = -Vector3.up;
+            // customGravity.gravityDirection = -Vector3.up;
             moveDirForward = Vector3.zero;
         }
     }

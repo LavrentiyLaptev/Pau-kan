@@ -1,16 +1,12 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using Unity.Collections;
-using Unity.VisualScripting;
+using System.Security.Cryptography;
 using UnityEngine;
-using UnityEngine.Jobs;
 
 public class PlayerController2 : MonoBehaviour
 {
     private Vector2 inputDirs = Vector2.zero;
     private Vector3 moveDirectionForward;
     private Vector3 moveDirectionRight;
+    private Rigidbody rb;
     public float speed;
     public float gravity;
     public float sphereRadius;
@@ -22,7 +18,7 @@ public class PlayerController2 : MonoBehaviour
     public float cornerLimitDst = 1f;
     private Vector3 lastDir = Vector3.zero;
     public Vector3 lastSurfaceNormal = Vector3.zero;
-    [SerializeField] private Vector3 lastCornerPoint = Vector3.zero;
+    private Vector3 lastCornerPoint = Vector3.zero;
     
     private Vector3 newSurfacePoint = Vector3.zero;
     public bool cornerState = false;
@@ -32,49 +28,80 @@ public class PlayerController2 : MonoBehaviour
     public float furtherPointStep = 0.1f;
 
     [Header("Circular Movement")]
-    private Vector3 lastSurfacePoint = Vector3.zero;
+    public float maxSphereRadius = 0.6f;
+    [SerializeField] private Vector3 lastSurfacePoint = Vector3.zero;
     public Vector3 circularPoint;
     public float circularRadius;
     [SerializeField] private bool yPositive = true;
-    // private int loopIndex = 0;
     public bool circularState = false;
+    [SerializeField] float xSpeedCoef;
+    public SphereMovement sphereMovement;
+    public float spherePointOffset = 0.1f;
+
+    [Header("Jump")]
+    public bool useGravity = true;
+    public Vector3 jumpDir;
+    public float jumpForce;
+    public float flyForce;
+    [Header("Gravity")]
+    public CustomGravity customGravity;
 
 
     void Start()
     {
         groundMask = LayerMask.GetMask("Ground");
+        rb = GetComponent<Rigidbody>();
     }
 
     void Update()
     {
         Inputs();
+        GetTouchPounts();
+        if(Input.GetKeyDown(KeyCode.Space)){
+            Jump();
+        }
+        CheckGravityState();
+        FreeMovement();
     }
 
     void FixedUpdate(){
-        GetTouchPounts();
+        
         // Movement();
         // CircularMovement();
+        // CircularStateLogic();
     }
 
     private void Inputs(){
         inputDirs = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
     }
 
+    private void Jump(){
+        if(useGravity) return;
+        rb.AddForce((transform.forward * jumpDir.z + transform.up * jumpDir.y + transform.right * jumpDir.x) * jumpForce, ForceMode.Impulse);
+    }
+
     private void ApplyGravity(Vector3 gravityDir){
-        transform.Translate(gravityDir * gravity * Time.fixedDeltaTime, Space.World);
+        transform.Translate(gravityDir * gravity * Time.deltaTime, Space.World);
     }
 
     private void Movement(){
+        if(useGravity) return;
         Vector3 forceDir = ((moveDirectionForward * inputDirs.y) + (moveDirectionRight * inputDirs.x)).normalized;
         lastDir = forceDir;
-        transform.Translate(forceDir * speed * Time.fixedDeltaTime, Space.World);
+        transform.Translate(forceDir * speed * Time.deltaTime, Space.World);
+    }
+
+    private void FreeMovement(){
+        if(!useGravity) return;
+        Vector3 forceDir = ((transform.forward * inputDirs.y) + (transform.right * inputDirs.x)).normalized;
+        forceDir.y = 0;
+        rb.AddForce(forceDir * flyForce * Time.deltaTime, ForceMode.Force);
     }
 
     private void GetTouchPounts(){
         
         Collider[] cols = new Collider[10];
         int colNums = Physics.OverlapSphereNonAlloc(transform.position, sphereRadius, cols, groundMask, QueryTriggerInteraction.Ignore);
-        // int colNums = Physics.OverlapBoxNonAlloc(transform.position, Vector3.one * sphereRadius, cols, Quaternion.Euler(0, 0, 0), groundMask, QueryTriggerInteraction.Ignore);
         Vector3[] touchPoints = new Vector3[colNums];
 
         // FIND TOUCH POINTS
@@ -114,16 +141,30 @@ public class PlayerController2 : MonoBehaviour
         if(surfaceNormal.magnitude <= 1){
             circularState = false;
             lastSurfaceNormal = surfaceNormal;
-            
-            // Debug.Log(surfaceNormal + " || " + lastSurface);
+
             cornerState = false;
             GetDirection(surfaceNormal);
             Movement();
         }else{ 
+            
+            if(useGravity) return;
 
             // CornerStateLogic();
 
-            CircularStateLogic();
+            // CircularStateLogic();
+
+            SphereStateLogic();
+
+        }
+    }
+
+    private void CheckGravityState(){
+        if(Vector3.Distance(lastSurfacePoint, transform.position) >= maxSphereRadius){
+            useGravity = true;
+            customGravity.ApplyGravity(Time.deltaTime);
+        }else{
+            useGravity = false;
+            customGravity.ResetGravityAccelerationTime();
         }
     }
 
@@ -166,11 +207,28 @@ public class PlayerController2 : MonoBehaviour
         }
         
         circularState = true;
+
         CircularMovement();
     }
 
+    private bool SphereStateLogic(){
+
+        circularRadius = Vector3.Distance(transform.position, lastSurfacePoint);
+
+        sphereMovement.sphereRadius = circularRadius;
+
+        sphereMovement.spherePosition = lastSurfacePoint;
+        
+        sphereMovement.speed = speed;
+
+        sphereMovement.inputDirs = inputDirs;
+
+        sphereMovement.UpdateMovement();
+
+        return true;
+    }
+
     private Vector3 GetBehindNormal(){
-        // Debug.Log("GET BEHIND NORMAL");
         RaycastHit raycastHit;
 
         if(Physics.Raycast(transform.position - (lastDir * sphereRadius), -lastSurfaceNormal, out raycastHit, sphereRadius + 0.5f, groundMask, QueryTriggerInteraction.Ignore)){
@@ -209,8 +267,20 @@ public class PlayerController2 : MonoBehaviour
     }
 
     private void GetDirection(Vector3 surfaceNormal){
-        moveDirectionForward = Vector3.ProjectOnPlane(transform.forward, surfaceNormal);
-        moveDirectionRight = Vector3.ProjectOnPlane(transform.right, surfaceNormal);
+        // moveDirectionForward = Vector3.ProjectOnPlane(transform.forward, surfaceNormal);
+        // moveDirectionRight = Vector3.ProjectOnPlane(transform.right, surfaceNormal);
+
+        Quaternion rotation = Quaternion.FromToRotation(Vector3.up, surfaceNormal);
+        var rotationMatrix = Matrix4x4.LookAt(surfaceNormal, Vector3.up, Vector3.up);
+
+        Vector3 forward = (transform.forward);
+        Vector3 right = (rotationMatrix * transform.right);
+
+        moveDirectionForward = Vector3.ProjectOnPlane(forward, surfaceNormal);
+        moveDirectionRight = Vector3.ProjectOnPlane(right, surfaceNormal);
+
+        // moveDirectionForward = forward;
+        // moveDirectionRight = right;
     }
 
     private bool IsFatherSurfaceCurve(){
@@ -237,8 +307,6 @@ public class PlayerController2 : MonoBehaviour
 
         Vector3 moveDir;
 
-        Vector3 upAxis = Vector3.right;
-
         Vector3 projectDir = Vector3.up;
 
         // float xPos = transform.position.x - circularPoint.x;
@@ -252,25 +320,30 @@ public class PlayerController2 : MonoBehaviour
         // }else if(zPos > yPos && zPos > xPos){
         //     projectDir = Vector3.forward;
         // }
-        
 
         Vector3 sphereDirForward = Vector3.ProjectOnPlane(transform.forward, projectDir);
         Vector3 sphereDirRight = Vector3.ProjectOnPlane(transform.right, projectDir);
 
-        moveDir = (sphereDirForward * inputDirs.y + sphereDirRight * inputDirs.x).normalized;
+        // Vector3 sphereDirForward = Vector3.Cross(transform.forward, projectDir);
+        // Vector3 sphereDirRight = Vector3.Cross(transform.right, projectDir);
 
-        float xSpeedCoef = Mathf.Abs(transform.position.y - circularPoint.y) / circularRadius;
+        moveDir = (sphereDirForward * inputDirs.y + sphereDirRight * inputDirs.x);
+        // moveDir = inputDirs;
+
+        xSpeedCoef = Mathf.Abs(transform.position.y - circularPoint.y) / circularRadius;
 
         if(xSpeedCoef <= 0) xSpeedCoef = 0.1f;
         if(xSpeedCoef > 1) xSpeedCoef = 1;
+
+        xSpeedCoef = 1;
 
         // XYZ movement
 
         //  * (yPositive? 1 : -1)
 
-        float z = transform.position.z + (moveDir.z * (yPositive? 1 : -1) * speed * xSpeedCoef * Time.fixedDeltaTime);
+        float z = transform.position.z + (moveDir.z * xSpeedCoef *  speed * Time.fixedDeltaTime);
 
-        float x = transform.position.x + (moveDir.x * (yPositive? 1 : -1) * speed * xSpeedCoef * Time.fixedDeltaTime);
+        float x = transform.position.x + (moveDir.x * xSpeedCoef * speed * Time.fixedDeltaTime);
 
         float y = circularPoint.y + ((yPositive? 1 : -1) * Mathf.Sqrt((circularRadius * circularRadius) - Mathf.Pow(x - circularPoint.x, 2) - Mathf.Pow(z - circularPoint.z, 2)));
 
@@ -290,12 +363,6 @@ public class PlayerController2 : MonoBehaviour
     }
 
     void OnDrawGizmos(){
-        // Gizmos.color = Color.blue;
-        // Gizmos.DrawSphere(lastCornerPoint, 0.1f);
-
-        // Gizmos.color = Color.red;
-        // Gizmos.DrawSphere(newSurfacePoint, 0.1f);
-        
         Gizmos.color = Color.blue;
         Gizmos.DrawSphere(lastSurfacePoint, 0.1f);
     }

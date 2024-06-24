@@ -2,18 +2,25 @@ using UnityEngine;
 
 public class CustomGravity : MonoBehaviour
 {
-    public float gravityChangeSpeed;
-    public float force;
-    public Vector3 smoothDirection;
-    public Vector3 gravityDirection; 
-    public Rigidbody rb;
+    public AnimationCurve gravityCurve;
+    public float gravityForce = 9.81f;
+    public float maxGravityTime;
+    [SerializeField] private float currentGravityTime;
+    private Rigidbody rb;
 
     void Start(){
-        rb.useGravity = false;
+        rb = GetComponent<Rigidbody>();
     }
 
-    void FixedUpdate(){
-        smoothDirection = Vector3.Lerp(smoothDirection, gravityDirection, gravityChangeSpeed * Time.fixedDeltaTime);
-        rb.AddForce(smoothDirection * force * Time.fixedDeltaTime, ForceMode.Impulse);
+    public void ApplyGravity(float deltaTime){
+        currentGravityTime += deltaTime;
+        if(currentGravityTime > maxGravityTime){
+            currentGravityTime = maxGravityTime;
+        }
+        rb.AddForce(-Vector3.up * gravityForce * gravityCurve.Evaluate(currentGravityTime/maxGravityTime) * maxGravityTime * deltaTime);
+    }
+
+    public void ResetGravityAccelerationTime(){
+        currentGravityTime = 0;
     }
 }
