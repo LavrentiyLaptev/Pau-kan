@@ -4,6 +4,7 @@ public class Projectile : MonoBehaviour
 {
     private Rigidbody rb;
     public float speed;
+    public float projectileDamage;
     
     public void Init(Vector3 target)
     {
@@ -16,5 +17,13 @@ public class Projectile : MonoBehaviour
         }
 
         rb.AddForce(direction * speed, ForceMode.Impulse);
+    }
+
+    public void OnTriggerEnter(Collider col){
+        TargetDetecting(col.gameObject);
+    }
+
+    public virtual void TargetDetecting(GameObject target){
+
     }
 }

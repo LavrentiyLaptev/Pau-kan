@@ -81,7 +81,18 @@ public class PlayerController : MonoBehaviour
     private void Jump(){
         currentJumpCount++;
         if(useGravity && currentJumpCount > maxJumps) return;
-        rb.AddForce((transform.forward * jumpDir.z + transform.up * jumpDir.y + transform.right * jumpDir.x) * (currentJumpCount <= 1 ? jumpForce : extraJumpForce), ForceMode.Impulse);
+        if(inputDirs.magnitude > 0){
+            rb.AddForce((transform.forward * inputDirs.y * jumpDir.z + 
+                        transform.up * jumpDir.y + 
+                        transform.right * inputDirs.x) * 
+                        (currentJumpCount <= 1 ? jumpForce : extraJumpForce), ForceMode.Impulse);
+        }else{
+            rb.AddForce((transform.forward * jumpDir.z + 
+                        transform.up * jumpDir.y + 
+                        transform.right * jumpDir.x) * 
+                        (currentJumpCount <= 1 ? jumpForce : extraJumpForce), ForceMode.Impulse);
+        }
+        
     }
 
     private void ApplyGravity(Vector3 gravityDir){
@@ -272,8 +283,8 @@ public class PlayerController : MonoBehaviour
     }
 
     private void GetDirection(Vector3 surfaceNormal){
-        moveDirectionForward = Vector3.ProjectOnPlane(transform.forward, surfaceNormal);
-        moveDirectionRight = Vector3.ProjectOnPlane(transform.right, surfaceNormal);
+        moveDirectionForward = Vector3.ProjectOnPlane(transform.forward, surfaceNormal).normalized;
+        moveDirectionRight = Vector3.ProjectOnPlane(transform.right, surfaceNormal).normalized;
     }
 
     private bool IsFatherSurfaceCurve(){

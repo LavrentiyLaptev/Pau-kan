@@ -9,11 +9,11 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 352388912724503619}
+  - component: {fileID: 8965543418048211489}
+  - component: {fileID: 2124372588964415735}
   - component: {fileID: 7133004546734285679}
   - component: {fileID: 6255851981093697110}
   - component: {fileID: 5971371975826759299}
-  - component: {fileID: 8965543418048211489}
-  - component: {fileID: 2124372588964415735}
   m_Layer: 0
   m_Name: AbilitySphere
   m_TagString: Untagged
@@ -37,6 +37,33 @@ Transform:
   - {fileID: 8521534641228296431}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8965543418048211489
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8208322939833626504}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cad93b250e6ad66458184a48cfaafc66, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  abilityType: 0
+--- !u!114 &2124372588964415735
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8208322939833626504}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 780ac29a609eb5a40a5ddf0c3fa38790, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  rotationAxis: {x: 0, y: 1, z: 0}
+  speed: 60
 --- !u!33 &7133004546734285679
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -108,33 +135,6 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.5
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &8965543418048211489
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8208322939833626504}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cad93b250e6ad66458184a48cfaafc66, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  abilityType: 0
---- !u!114 &2124372588964415735
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8208322939833626504}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 780ac29a609eb5a40a5ddf0c3fa38790, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  rotationAxis: {x: 0, y: 1, z: 0}
-  speed: 60
 --- !u!1001 &8198851388758054660
 PrefabInstance:
   m_ObjectHideFlags: 0

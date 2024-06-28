@@ -4,11 +4,11 @@ using UnityEngine;
 public class Weapon : MonoBehaviour
 {
     public Projectile projectile;
-    public EnemyList enemyList;
+    // public EnemyList enemyList;
     public Transform firePoint;
     public Transform origin;
     public Transform playerTransform;
-    public Transform testTarget;
+    public Transform currentTarget;
     public float aimingSpeed;
     public float aimDistance = 10;
     public float timeBtwShots = 1f;
@@ -31,10 +31,16 @@ public class Weapon : MonoBehaviour
             Shoot();
         }
     }
+
     void FixedUpdate(){
-        AimingLogic();
-        if(t >= timeBtwShots){
-            Shoot();
+        if(currentTarget != null){
+            AimingLogic();
+            if(t >= timeBtwShots){
+                Shoot();
+            }
+        }else{
+            Aiming(playerTransform.forward);
+            aiming = false;
         }
         t += Time.fixedDeltaTime;
     }
@@ -43,28 +49,13 @@ public class Weapon : MonoBehaviour
         if(!aiming) return;
         t = 0;
         Projectile newProjectile = Instantiate(projectile, firePoint.position, firePoint.rotation);
-        newProjectile.Init(testTarget.position);
-    }
-
-    private void GetTarget(){
-        float minDst = float.PositiveInfinity;
-        Vector3 closestTarget = Vector3.positiveInfinity;
-        foreach (var enemy in enemyList.enemysTransforms)
-        {   
-            float distance = Vector3.Distance(transform.position, enemy.position);
-            if(distance < minDst){
-                minDst = distance;
-                closestTarget = enemy.position;
-            }
-        }
-
-        targetPosition = closestTarget;
+        newProjectile.Init(currentTarget.position);
     }
 
     private void AimingLogic(){
-        direction = (testTarget.position - origin.position).normalized;
+        direction = (currentTarget.position - origin.position).normalized;
         float angle = Vector3.Angle(origin.forward, direction);
-        if(angle <= maxAimingAngle && CheckRay(testTarget.position)){
+        if(angle <= maxAimingAngle && CheckRay(currentTarget.position)){
             aiming = true;
             Aiming(direction);
         }else{
@@ -79,7 +70,7 @@ public class Weapon : MonoBehaviour
 
     private bool CheckRay(Vector3 targetPos){
         RaycastHit hit;
-        if(Physics.Raycast(origin.position, (targetPos - origin.position).normalized,  out hit, aimDistance, rayToEnemyMask, QueryTriggerInteraction.Ignore)){
+        if(Physics.Raycast(origin.position, (targetPos - origin.position).normalized,  out hit, aimDistance, rayToEnemyMask)){
             if(hit.transform.gameObject.layer == enemyLayer){
                 return true;
             }

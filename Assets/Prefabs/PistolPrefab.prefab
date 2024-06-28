@@ -162,14 +162,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 56443444afa98054aaef0cfcbfa98552, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  projectile: {fileID: 5042786431857782039, guid: 48eaa3851677d8d428361912a967cb31, type: 3}
-  enemyList: {fileID: 0}
+  projectile: {fileID: 107282956111107204, guid: 48eaa3851677d8d428361912a967cb31, type: 3}
   firePoint: {fileID: 5358670972129603439}
   origin: {fileID: 6580141314335267323}
   playerTransform: {fileID: 0}
-  testTarget: {fileID: 0}
+  currentTarget: {fileID: 0}
   aimingSpeed: 5
   aimDistance: 10
+  timeBtwShots: 1
   maxAimingAngle: 50
 --- !u!1 &7338881571999167379
 GameObject:

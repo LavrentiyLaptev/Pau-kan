@@ -1,13 +1,12 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class Ability : MonoBehaviour
 {
     public AbilityType type;
     public AllAbilities allAbilities;
-    public float currentDuration;
-    public float maxDuration;
+    private float currentDuration;
+    public float duration = 30;
     public ImageAmountController imageAmountController;
     protected Coroutine durationCoroutine;
 
@@ -29,10 +28,10 @@ public class Ability : MonoBehaviour
 
         currentDuration = 0;
 
-        while(currentDuration < maxDuration){
+        while(currentDuration < duration){
             yield return new WaitForFixedUpdate();
             currentDuration += Time.fixedDeltaTime;
-            imageAmountController.SetAmount(currentDuration, maxDuration);
+            imageAmountController.SetAmount(currentDuration, duration);
         }
 
         imageAmountController.gameObject.SetActive(false);
